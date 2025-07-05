@@ -10,19 +10,17 @@ package br.com.ifba.curso.entity;
  *
  * @author luis2
  */
+import br.com.ifba.infrastructure.entity.PersistenceEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import java.io.Serializable;
 
 
 @Entity
-public class Curso {
-
-    @Id
-    @GeneratedValue(strategy  = GenerationType.AUTO)
-    private Long id;
+public class Curso extends PersistenceEntity implements Serializable {
 
     @Column (name= "nome", nullable = false)
     private String nome;
@@ -43,21 +41,13 @@ public class Curso {
     }
 
 
-    public Curso(Long id, String nome, String codigo, int cargaHoraria, boolean ativo, int vagas) {
-        this.id = id;
+    public Curso(String nome, String codigo, int cargaHoraria, boolean ativo, int vagas) {
+        super();
         this.nome = nome;
         this.codigo = codigo;
         this.cargaHoraria = cargaHoraria;
         this.ativo = ativo;
         this.vagas = vagas;
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
     }
 
     public String getNome() {

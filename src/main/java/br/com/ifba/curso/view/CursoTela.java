@@ -4,6 +4,8 @@
  */
 package br.com.ifba.curso.view;
 
+import br.com.ifba.curso.dao.CursoDao;
+import br.com.ifba.curso.dao.CursoIDao;
 import br.com.ifba.curso.entity.Curso;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -195,12 +197,8 @@ public class CursoTela extends javax.swing.JFrame {
             curso.setAtivo(ativo);
 
 
-            em.getTransaction().begin();
-            em.persist(curso);
-            em.getTransaction().commit();
-
-            em.close();
-            emf.close();
+            CursoIDao cursoDao = new CursoDao();
+            cursoDao.save(curso);
 
             JOptionPane.showMessageDialog(this, "Curso salvo com sucesso!");
             
@@ -226,15 +224,11 @@ public class CursoTela extends javax.swing.JFrame {
     try {
         Long idCurso = Long.parseLong(idStr.trim());
 
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("prg03persistencia");
-        EntityManager em = emf.createEntityManager();
-
-        Curso curso = em.find(Curso.class, idCurso);
+        CursoIDao cursoDao = new CursoDao(); // Usando o DAO
+        Curso curso = cursoDao.findById(idCurso);
 
         if (curso == null) {
             JOptionPane.showMessageDialog(this, "Curso com ID '" + idCurso + "' não encontrado.");
-            em.close();
-            emf.close();
             return;
         }
 
@@ -273,13 +267,13 @@ public class CursoTela extends javax.swing.JFrame {
                 int novaCargaHoraria = Integer.parseInt(cargaStr);
                 int novasVagas = Integer.parseInt(vagasStr);
 
-                em.getTransaction().begin();
                 curso.setNome(novoNome);
                 curso.setCodigo(novoCodigo);
                 curso.setCargaHoraria(novaCargaHoraria);
                 curso.setVagas(novasVagas);
                 curso.setAtivo(ativo);
-                em.getTransaction().commit();
+
+                cursoDao.update(curso); // Chamada ao DAO
 
                 JOptionPane.showMessageDialog(this, "Curso atualizado com sucesso!");
                 carregarCursosNaTabela();
@@ -289,9 +283,6 @@ public class CursoTela extends javax.swing.JFrame {
             }
         }
 
-        em.close();
-        emf.close();
-
     } catch (NumberFormatException e) {
         JOptionPane.showMessageDialog(this, "ID inválido! Informe um número válido.", "Erro", JOptionPane.ERROR_MESSAGE);
     } catch (Exception e) {
@@ -300,6 +291,7 @@ public class CursoTela extends javax.swing.JFrame {
     }//GEN-LAST:event_btnEditarActionPerformed
 
     private void btnRemoverActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRemoverActionPerformed
+
     String idStr = JOptionPane.showInputDialog(this, "Informe o ID do curso a ser removido:");
 
     if (idStr == null || idStr.trim().isEmpty()) {
@@ -318,31 +310,19 @@ public class CursoTela extends javax.swing.JFrame {
         );
 
         if (confirmacao == JOptionPane.YES_OPTION) {
-            // --- Abertura da persistência ---
-            EntityManagerFactory emf = Persistence.createEntityManagerFactory("prg03persistencia");
-            EntityManager em = emf.createEntityManager();
+            // --- Usando DAO --- 
+            CursoIDao cursoDao = new CursoDao();
+            Curso curso = cursoDao.findById(idCurso);
 
-            try {
-                Curso curso = em.find(Curso.class, idCurso);
-
-                if (curso != null) {
-                    em.getTransaction().begin();
-                    em.remove(curso);
-                    em.getTransaction().commit();
-                    JOptionPane.showMessageDialog(this, "Curso removido com sucesso!");
-                    carregarCursosNaTabela();
-                } else {
-                    JOptionPane.showMessageDialog(this, "Curso com ID '" + idCurso + "' não encontrado.", "Erro", JOptionPane.ERROR_MESSAGE);
-                }
-            } finally {
-                em.close();
-                emf.close();
+            if (curso != null) {
+                cursoDao.delete(curso);
+                JOptionPane.showMessageDialog(this, "Curso removido com sucesso!");
+                carregarCursosNaTabela();
+            } else {
+                JOptionPane.showMessageDialog(this, "Curso com ID '" + idCurso + "' não encontrado.", "Erro", JOptionPane.ERROR_MESSAGE);
             }
-            
-            
-
-
         }
+
     } catch (NumberFormatException e) {
         JOptionPane.showMessageDialog(this, "ID inválido! Informe um número válido.", "Erro de Formato", JOptionPane.ERROR_MESSAGE);
     } catch (Exception e) {
