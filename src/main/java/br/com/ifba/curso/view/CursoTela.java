@@ -4,15 +4,14 @@
  */
 package br.com.ifba.curso.view;
 
-import br.com.ifba.curso.dao.CursoDao;
-import br.com.ifba.curso.dao.CursoIDao;
+import br.com.ifba.curso.controller.CursoController;
+import br.com.ifba.curso.controller.CursoIController;
 import br.com.ifba.curso.entity.Curso;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.Persistence;
+import java.util.List;
 import javax.swing.JCheckBox;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
+import javax.swing.table.DefaultTableModel;
 
 /**
  *
@@ -24,8 +23,8 @@ public class CursoTela extends javax.swing.JFrame {
      * Creates new form CursoTela
      */
     
-    EntityManagerFactory emf = Persistence.createEntityManagerFactory("prg03persistencia");
-    EntityManager em = emf.createEntityManager();
+    //Linha responsavel por implementar o controller via camada Controller ao inves de entitymanager
+    private final CursoIController cursoController = new CursoController();
 
     
     public CursoTela() {
@@ -145,32 +144,20 @@ public class CursoTela extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnAdicionarCursoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAdicionarCursoActionPerformed
-    // --- Cria os componentes para o painel de diálogo ---
     JTextField campoNome = new JTextField();
     JTextField campoCodigo = new JTextField();
     JTextField campoCargaHoraria = new JTextField();
     JTextField campoVagas = new JTextField();
-    JCheckBox checkAtivo = new JCheckBox("Ativo", true); // Caixa de seleção para o status, já marcada como padrão
+    JCheckBox checkAtivo = new JCheckBox("Ativo", true);
 
-    // --- Monta o painel com todos os campos ---
     Object[] campos = {
-        "Nome do Curso:", campoNome,
-        "Código do Curso:", campoCodigo,
-        "Carga Horária:", campoCargaHoraria,
-        "Vagas:", campoVagas,
+        "Nome do Curso:", campoNome, "Código do Curso:", campoCodigo,
+        "Carga Horária:", campoCargaHoraria, "Vagas:", campoVagas,
         "Situação:", checkAtivo
     };
 
-    // --- Exibe o painel de diálogo ---
-    int opcao = JOptionPane.showConfirmDialog(
-        this, // 'this' para centralizar na janela principal
-        campos,
-        "Adicionar Novo Curso",
-        JOptionPane.OK_CANCEL_OPTION,
-        JOptionPane.PLAIN_MESSAGE
-    );
+    int opcao = JOptionPane.showConfirmDialog(this, campos, "Adicionar Novo Curso", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
-    // --- Processa os dados se o usuário clicar em "OK" ---
     if (opcao == JOptionPane.OK_OPTION) {
         String nome = campoNome.getText();
         String codigo = campoCodigo.getText();
@@ -178,14 +165,12 @@ public class CursoTela extends javax.swing.JFrame {
         String vagasStr = campoVagas.getText();
         boolean ativo = checkAtivo.isSelected();
         
-        // Validação para garantir que os campos não estão vazios
         if (nome.trim().isEmpty() || codigo.trim().isEmpty() || cargaStr.trim().isEmpty() || vagasStr.trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Todos os campos devem ser preenchidos.", "Erro de Validação", JOptionPane.ERROR_MESSAGE);
-            return; // Interrompe a execução se a validação falhar
+            return;
         }
 
         try {
-            // --- Converte os valores numéricos e cria a entidade ---
             int cargaHoraria = Integer.parseInt(cargaStr);
             int vagas = Integer.parseInt(vagasStr);
             
@@ -196,126 +181,89 @@ public class CursoTela extends javax.swing.JFrame {
             curso.setVagas(vagas);
             curso.setAtivo(ativo);
 
-
-            CursoIDao cursoDao = new CursoDao();
-            cursoDao.save(curso);
+            // A chamada ao DAO foi substituída pela chamada ao Controller.
+            this.cursoController.saveCurso(curso);
 
             JOptionPane.showMessageDialog(this, "Curso salvo com sucesso!");
-            
-            
             carregarCursosNaTabela();
             
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "Os campos 'Carga Horária' e 'Vagas' devem ser números válidos.", "Erro de Formato", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Erro ao salvar o curso: " + e.getMessage(), "Erro de Persistência", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Erro ao salvar o curso: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
     }
     }//GEN-LAST:event_btnAdicionarCursoActionPerformed
 
     private void btnEditarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEditarActionPerformed
     String idStr = JOptionPane.showInputDialog(this, "Informe o ID do curso a ser editado:");
-
-    if (idStr == null || idStr.trim().isEmpty()) {
-        JOptionPane.showMessageDialog(this, "ID do curso não informado.");
-        return;
-    }
+    if (idStr == null || idStr.trim().isEmpty()) return;
 
     try {
         Long idCurso = Long.parseLong(idStr.trim());
 
-        CursoIDao cursoDao = new CursoDao(); // Usando o DAO
-        Curso curso = cursoDao.findById(idCurso);
+        // Busca o curso através do Controller, não mais do DAO.
+        Curso curso = this.cursoController.findCursoById(idCurso);
 
         if (curso == null) {
             JOptionPane.showMessageDialog(this, "Curso com ID '" + idCurso + "' não encontrado.");
             return;
         }
 
-        // Criar campos preenchidos
         JTextField campoNome = new JTextField(curso.getNome());
         JTextField campoCodigo = new JTextField(curso.getCodigo());
         JTextField campoCargaHoraria = new JTextField(String.valueOf(curso.getCargaHoraria()));
         JTextField campoVagas = new JTextField(String.valueOf(curso.getVagas()));
-        JCheckBox checkAtivo = new JCheckBox("Ativo");
-        checkAtivo.setSelected(curso.isAtivo());
+        JCheckBox checkAtivo = new JCheckBox("Ativo", curso.isAtivo());
 
         Object[] campos = {
-            "Nome:", campoNome,
-            "Código do Curso:", campoCodigo,
-            "Carga Horária:", campoCargaHoraria,
-            "Vagas:", campoVagas,
+            "Nome:", campoNome, "Código do Curso:", campoCodigo,
+            "Carga Horária:", campoCargaHoraria, "Vagas:", campoVagas,
             "Situação:", checkAtivo
         };
 
-        int opcao = JOptionPane.showConfirmDialog(
-            this,
-            campos,
-            "Editar Curso ID " + idCurso,
-            JOptionPane.OK_CANCEL_OPTION,
-            JOptionPane.PLAIN_MESSAGE
-        );
+        int opcao = JOptionPane.showConfirmDialog(this, campos, "Editar Curso ID " + idCurso, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
         if (opcao == JOptionPane.OK_OPTION) {
-            String novoNome = campoNome.getText();
-            String novoCodigo = campoCodigo.getText();
-            String cargaStr = campoCargaHoraria.getText();
-            String vagasStr = campoVagas.getText();
-            boolean ativo = checkAtivo.isSelected();
+            curso.setNome(campoNome.getText());
+            curso.setCodigo(campoCodigo.getText());
+            curso.setCargaHoraria(Integer.parseInt(campoCargaHoraria.getText()));
+            curso.setVagas(Integer.parseInt(campoVagas.getText()));
+            curso.setAtivo(checkAtivo.isSelected());
 
-            try {
-                int novaCargaHoraria = Integer.parseInt(cargaStr);
-                int novasVagas = Integer.parseInt(vagasStr);
+            // Atualiza o curso através do Controller.
+            this.cursoController.updateCurso(curso);
 
-                curso.setNome(novoNome);
-                curso.setCodigo(novoCodigo);
-                curso.setCargaHoraria(novaCargaHoraria);
-                curso.setVagas(novasVagas);
-                curso.setAtivo(ativo);
-
-                cursoDao.update(curso); // Chamada ao DAO
-
-                JOptionPane.showMessageDialog(this, "Curso atualizado com sucesso!");
-                carregarCursosNaTabela();
-
-            } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(this, "Carga horária e/ou vagas inválidas!", "Erro", JOptionPane.ERROR_MESSAGE);
-            }
+            JOptionPane.showMessageDialog(this, "Curso atualizado com sucesso!");
+            carregarCursosNaTabela();
         }
 
     } catch (NumberFormatException e) {
         JOptionPane.showMessageDialog(this, "ID inválido! Informe um número válido.", "Erro", JOptionPane.ERROR_MESSAGE);
     } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Erro ao editar curso: " + e.getMessage());
+        JOptionPane.showMessageDialog(this, "Erro ao editar curso: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
     }
     }//GEN-LAST:event_btnEditarActionPerformed
 
     private void btnRemoverActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRemoverActionPerformed
 
     String idStr = JOptionPane.showInputDialog(this, "Informe o ID do curso a ser removido:");
-
-    if (idStr == null || idStr.trim().isEmpty()) {
-        JOptionPane.showMessageDialog(this, "ID do curso não informado.", "Aviso", JOptionPane.WARNING_MESSAGE);
-        return;
-    }
+    if (idStr == null || idStr.trim().isEmpty()) return;
 
     try {
         Long idCurso = Long.parseLong(idStr.trim());
-
-        int confirmacao = JOptionPane.showConfirmDialog(
-            this,
-            "Tem certeza que deseja remover o curso com ID '" + idCurso + "'?",
-            "Confirmação",
-            JOptionPane.YES_NO_OPTION
-        );
+        int confirmacao = JOptionPane.showConfirmDialog(this, 
+            "Tem certeza que deseja remover o curso com ID " + idCurso + "?", 
+            "Confirmação", 
+            JOptionPane.YES_NO_OPTION);
 
         if (confirmacao == JOptionPane.YES_OPTION) {
-            // --- Usando DAO --- 
-            CursoIDao cursoDao = new CursoDao();
-            Curso curso = cursoDao.findById(idCurso);
+            // Busca o curso pelo Controller para depois deletar.
+            Curso curso = this.cursoController.findCursoById(idCurso);
 
             if (curso != null) {
-                cursoDao.delete(curso);
+                // Deleta o curso através do Controller.
+                this.cursoController.deleteCurso(curso);
                 JOptionPane.showMessageDialog(this, "Curso removido com sucesso!");
                 carregarCursosNaTabela();
             } else {
@@ -323,48 +271,37 @@ public class CursoTela extends javax.swing.JFrame {
             }
         }
 
-    } catch (NumberFormatException e) {
+    }
+    catch (NumberFormatException e) {
         JOptionPane.showMessageDialog(this, "ID inválido! Informe um número válido.", "Erro de Formato", JOptionPane.ERROR_MESSAGE);
     } catch (Exception e) {
         JOptionPane.showMessageDialog(this, "Erro ao remover curso: " + e.getMessage(), "Erro de Persistência", JOptionPane.ERROR_MESSAGE);
+        
     }    }//GEN-LAST:event_btnRemoverActionPerformed
 
     private void btnPesquisarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPesquisarActionPerformed
     String nomeBusca = txtPesquisar.getText().trim();
-
-    if (nomeBusca.isEmpty() || nomeBusca.equalsIgnoreCase("Pesquisar...")) {
-        // Se campo vazio ou texto padrão, carregar todos os cursos
+    if (nomeBusca.isEmpty() || nomeBusca.equalsIgnoreCase("Pesquisar...") || nomeBusca.equalsIgnoreCase("Pesquisar por nome...")) {
         carregarCursosNaTabela();
         return;
     }
 
     try {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("prg03persistencia");
-        EntityManager em = emf.createEntityManager();
-
-        java.util.List<Curso> cursos = em.createQuery(
-            "SELECT c FROM Curso c WHERE LOWER(c.nome) LIKE :nome", Curso.class)
-            .setParameter("nome", "%" + nomeBusca.toLowerCase() + "%")
-            .getResultList();
-
-        em.close();
-        emf.close();
-
-        // Limpar a tabela
-        javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) jtbCurso.getModel();
+        List<Curso> cursos = this.cursoController.findByName(nomeBusca);
+        
+        DefaultTableModel model = (DefaultTableModel) jtbCurso.getModel();
         model.setRowCount(0);
 
-        // Preencher a tabela com os resultados
+        // Ordem dos dados corrigida também aqui
         for (Curso curso : cursos) {
-            Object[] row = {
-                curso.getId(),
+            model.addRow(new Object[]{
                 curso.getNome(),
-                curso.getCodigo(),
                 curso.getCargaHoraria(),
+                curso.getCodigo(),
+                curso.isAtivo() ? "Ativo" : "Inativo",
                 curso.getVagas(),
-                curso.isAtivo() ? "Ativo" : "Inativo"
-            };
-            model.addRow(row);
+                curso.getId()
+            });
         }
 
         if (cursos.isEmpty()) {
@@ -412,40 +349,30 @@ public class CursoTela extends javax.swing.JFrame {
         });
     }
     
+// Substitua o método inteiro em CursoTela.java
     private void carregarCursosNaTabela() {
-    try {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("prg03persistencia");
-        EntityManager em = emf.createEntityManager();
+        try {
+            List<Curso> cursos = this.cursoController.getAllCursos();
 
-        java.util.List<Curso> cursos = em.createQuery("FROM Curso", Curso.class).getResultList();
+            DefaultTableModel model = (DefaultTableModel) jtbCurso.getModel();
+            model.setRowCount(0);
 
-        // Limpar a tabela
-        javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) jtbCurso.getModel();
-        model.setRowCount(0); // limpa as linhas
+            // Ordem dos dados corrigida para corresponder às colunas da sua tabela
+            for (Curso curso : cursos) {
+                model.addRow(new Object[]{
+                    curso.getNome(),
+                    curso.getCargaHoraria(),
+                    curso.getCodigo(),
+                    curso.isAtivo() ? "Ativo" : "Inativo",
+                    curso.getVagas(),
+                    curso.getId()
+                });
+            }
 
-        // Adicionar os dados
-        for (Curso curso : cursos) {
-            Object[] row = {
-                curso.getNome(),
-                curso.getCargaHoraria(),
-                curso.getCodigo(),
-                curso.isAtivo() ? "Ativo" : "Inativo",
-                curso.getVagas(),
-                curso.getId(), // assumindo que Curso tem getId()
-                
-                
-                
-            };
-            model.addRow(row);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro ao carregar cursos: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
         }
-
-        em.close();
-        emf.close();
-
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Erro ao carregar cursos: " + e.getMessage());
     }
-}
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnAdicionarCurso;
